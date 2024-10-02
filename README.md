@@ -1,4 +1,4 @@
-# Your Library Name
+# find_browsers
 
 A library for retrieving installed browsers (supports Windows and Linux).
 
