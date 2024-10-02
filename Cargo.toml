@@ -1,7 +1,12 @@
 [package]
 name = "find_browsers"
+description = "A library for retrieving installed browsers (supports Windows and Linux)."
 version = "0.1.0"
 edition = "2021"
+authors = ["Rin <icealtria@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/icealtria/find_browsers"
+readme = "README.md"
 
 [dependencies]
 dirs = "5.0.1"
