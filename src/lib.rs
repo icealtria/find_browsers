@@ -6,7 +6,7 @@ mod windows;
 
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Browser {
     pub name: String,
     pub exec: PathBuf,
