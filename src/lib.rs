@@ -1,4 +1,7 @@
+#[cfg(target_os = "linux")]
 mod linux;
+
+#[cfg(target_os = "windows")]
 mod windows;
 
 use std::path::PathBuf;
@@ -10,13 +13,12 @@ pub struct Browser {
 }
 
 pub fn get_browsers() -> Result<Vec<Browser>, Box<dyn std::error::Error>> {
-    if cfg!(target_os = "linux") {
-        linux::get_browsers()
-    } else if cfg!(target_os = "windows") {
-        windows::get_browsers()
-    } else {
-        Err("Unsupported operating system".into())
-    }
+    #[cfg(target_os = "windows")]
+    return windows::get_browsers();
+    #[cfg(target_os = "linux")]
+    return linux::get_browsers();
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    return Err("Unsupported OS".into());
 }
 
 #[cfg(test)]
