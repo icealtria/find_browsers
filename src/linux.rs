@@ -1,5 +1,6 @@
 use crate::Browser;
 use dirs::home_dir;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -51,7 +52,7 @@ fn extract_browsers_from_mimeinfo(content: &str, installed_browsers: &mut Vec<St
 }
 
 fn resolve_browser_exec_paths(browser_names: &[String]) -> Vec<Browser> {
-    let mut browsers_exec = Vec::new();
+    let mut browsers_map = HashMap::new();
     for desktop_path in get_desktop_paths() {
         if desktop_path.exists() {
             let entries = fs::read_dir(desktop_path).unwrap_or_else(|_| fs::read_dir("/").unwrap());
@@ -60,14 +61,14 @@ fn resolve_browser_exec_paths(browser_names: &[String]) -> Vec<Browser> {
                 if let Some(file_name) = entry_path.file_name().and_then(|s| s.to_str()) {
                     if browser_names.contains(&file_name.to_string()) {
                         if let Some(browser) = parse_desktop_entry(&entry_path) {
-                            browsers_exec.push(browser);
+                            browsers_map.insert(browser.name.clone(), browser);
                         }
                     }
                 }
             }
         }
     }
-    browsers_exec
+    browsers_map.into_values().collect()
 }
 
 fn get_desktop_paths() -> Vec<PathBuf> {
