@@ -37,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "find_browsers"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "dirs",
  "winreg",

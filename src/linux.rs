@@ -3,6 +3,7 @@ use dirs::home_dir;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 const HTTP_HANDLER: &str = "x-scheme-handler/http";
 
@@ -79,13 +80,38 @@ fn get_desktop_paths() -> Vec<PathBuf> {
     paths
 }
 
+fn resolve_executable_path(exec: String) -> PathBuf {
+    let exec = sanitize_exec_path(exec);
+    let path = PathBuf::from(exec.trim());
+    if path.is_absolute() {
+        path
+    } else {
+        // 如果不是绝对路径，使用 which 命令查找
+        if let Ok(output) = Command::new("which")
+            .arg(path.to_string_lossy().as_ref())
+            .output()
+        {
+            if output.status.success() {
+                // 从 which 输出中获取实际路径
+                String::from_utf8_lossy(&output.stdout)
+                    .trim()
+                    .into()
+            } else {
+                path
+            }
+        } else {
+            path
+        }
+    }
+}
+
 fn parse_desktop_entry(path: &Path) -> Option<Browser> {
     let content = fs::read_to_string(path).ok()?;
     let name = extract_field_from_desktop_file("Name=", &content)?;
     let exec = extract_field_from_desktop_file("Exec=", &content)?;
     Some(Browser {
         name,
-        exec: PathBuf::from(sanitize_exec_path(exec)),
+        exec: resolve_executable_path(exec),
     })
 }
 

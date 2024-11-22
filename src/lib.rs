@@ -21,6 +21,12 @@ pub fn get_browsers() -> Result<Vec<Browser>, Box<dyn std::error::Error>> {
     return Err("Unsupported OS".into());
 }
 
+#[cfg(target_os = "linux")]
+pub fn get_executable_browsers() -> Result<Vec<Browser>, Box<dyn std::error::Error>> {
+    let browsers = get_browsers()?;
+    Ok(browsers.into_iter().filter(|b| b.exec.exists()).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -32,5 +38,15 @@ mod tests {
             println!("Browser: {}\n Exec: {:?}", browser.name, browser.exec);
         }
         assert!(!browsers.is_empty(), "No browsers found");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn print_executable_browsers() {
+        let browsers = get_executable_browsers().unwrap();
+        for browser in &browsers {
+            println!("Executable Browser: {}\n Exec: {:?}", browser.name, browser.exec);
+            assert!(browser.exec.exists(), "Browser should exist");
+        }
     }
 }
