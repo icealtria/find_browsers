@@ -8,9 +8,11 @@ use std::process::Command;
 const HTTP_HANDLER: &str = "x-scheme-handler/http";
 
 const SYSTEM_DESKTOP_PATH: &str = "/usr/share/applications/";
-const LOCAL_DESKTOP_PATH: &str = ".local/share/applications/";
 const SYSTEM_MIMEINFO_PATH: &str = "/usr/share/applications/mimeinfo.cache";
+const LOCAL_DESKTOP_PATH: &str = ".local/share/applications/";
 const LOCAL_MIMEINFO_PATH: &str = ".local/share/applications/mimeinfo.cache";
+const FLATPAK_DESKTOP_PATH: &str = "/var/lib/flatpak/exports/share/applications";
+const FLATPAK_MIMEINFO_PATH: &str = "/var/lib/flatpak/exports/share/applications/mimeinfo.cache";
 
 pub fn get_browsers() -> Result<Vec<Browser>, Box<dyn std::error::Error>> {
     let browser_names = find_installed_browsers()?;
@@ -33,7 +35,10 @@ fn find_installed_browsers() -> Result<Vec<String>, std::io::Error> {
 }
 
 fn get_mimeinfo_paths() -> Vec<PathBuf> {
-    let mut paths = vec![PathBuf::from(SYSTEM_MIMEINFO_PATH)];
+    let mut paths = vec![
+        PathBuf::from(SYSTEM_MIMEINFO_PATH),
+        PathBuf::from(FLATPAK_MIMEINFO_PATH),
+    ];
     if let Some(home) = home_dir() {
         let local_mimeinfo = home.join(LOCAL_MIMEINFO_PATH);
         paths.push(local_mimeinfo);
@@ -73,7 +78,10 @@ fn resolve_browser_exec_paths(browser_names: &[String]) -> Vec<Browser> {
 }
 
 fn get_desktop_paths() -> Vec<PathBuf> {
-    let mut paths = vec![PathBuf::from(SYSTEM_DESKTOP_PATH)];
+    let mut paths = vec![
+        PathBuf::from(SYSTEM_DESKTOP_PATH),
+        PathBuf::from(FLATPAK_DESKTOP_PATH),
+    ];
     if let Some(home) = home_dir() {
         paths.push(home.join(LOCAL_DESKTOP_PATH));
     }
@@ -81,18 +89,24 @@ fn get_desktop_paths() -> Vec<PathBuf> {
 }
 
 fn resolve_executable_path(exec: String) -> PathBuf {
-    let exec = sanitize_exec_path(exec);
+    let exec = sanitize_exec_path(exec.clone());
+    if exec.contains("flatpak") {
+        let parts: Vec<&str> = exec.split_whitespace().collect();
+        if parts.len() > 2 && parts[0] == "/usr/bin/flatpak" && parts[1] == "run" {
+            let sanitized_exec = sanitize_flatpak_exec(exec);
+            return PathBuf::from(sanitized_exec);
+        }
+    }
+
     let path = PathBuf::from(exec.trim());
     if path.is_absolute() {
         path
     } else {
-        // 如果不是绝对路径，使用 which 命令查找
         if let Ok(output) = Command::new("which")
             .arg(path.to_string_lossy().as_ref())
             .output()
         {
             if output.status.success() {
-                // 从 which 输出中获取实际路径
                 String::from_utf8_lossy(&output.stdout)
                     .trim()
                     .into()
@@ -103,6 +117,10 @@ fn resolve_executable_path(exec: String) -> PathBuf {
             path
         }
     }
+}
+
+fn sanitize_flatpak_exec(exec: String) -> String {
+    exec.split("@@").next().unwrap_or(&exec).trim().to_string()
 }
 
 fn parse_desktop_entry(path: &Path) -> Option<Browser> {
